@@ -29,7 +29,7 @@ namespace Ofl.Net.Http
 
             // Get the groups and set.
             response.Version = new Version(match.GetGroupValue("version"));
-            response.StatusCode = (HttpStatusCode)Int32.Parse(match.GetGroupValue("statusCode"));
+            response.StatusCode = (HttpStatusCode) Int32.Parse(match.GetGroupValue("statusCode"));
             response.ReasonPhrase = match.GetGroupValue("reasonPhrase");
         }
 
