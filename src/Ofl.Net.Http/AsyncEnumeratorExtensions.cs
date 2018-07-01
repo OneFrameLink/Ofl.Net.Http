@@ -39,11 +39,9 @@ namespace Ofl.Net.Http
                 // for that here.
                 if (window.Masked) ms.SetLength(ms.Length - 1);
 
-                // The buffer.
-                ArraySegment<byte> buffer;
-
                 // Return the buffer.
-                if (!ms.TryGetBuffer(out buffer)) throw new InvalidOperationException("An error occured while trying to get the buffer from a MemoryStream.");
+                if (!ms.TryGetBuffer(out ArraySegment<byte> buffer))
+                    throw new InvalidOperationException("An error occured while trying to get the buffer from a MemoryStream.");
 
                 // Return the buffer.
                 return buffer;
