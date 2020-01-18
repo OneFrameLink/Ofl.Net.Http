@@ -28,8 +28,11 @@ namespace Ofl.Net.Http
         /// <param name="password">The password.</param>
         /// 
         //////////////////////////////////////////////////
-        public static void SetBasicHttpAuthentication(this HttpRequestMessage message,
-            string username, string password)
+        public static void SetBasicHttpAuthentication(
+            this HttpRequestMessage message,
+            string? username, 
+            string? password
+        )
         {
             // Validate the parameters.
             if (message == null) throw new ArgumentNullException(nameof(message));

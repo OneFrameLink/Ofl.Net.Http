@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http.Headers;
 
@@ -7,7 +8,12 @@ namespace Ofl.Net.Http.Headers
 {
     public static class HttpHeadersExtensions
     {
-        public static bool TryGetValue(this HttpHeaders headers, string name, out string value)
+        public static bool TryGetValue(
+            this HttpHeaders headers, 
+            string name, 
+            [NotNullWhen(true)]
+            out string? value
+        )
         {
             // Validate parameters.
             if (headers == null) throw new ArgumentNullException(nameof(headers));
@@ -16,11 +22,8 @@ namespace Ofl.Net.Http.Headers
             // Default value.
             value = null;
 
-            // The headers.
-            IEnumerable<string> values;
-
             // Try and get the headers, if there are none, return false.
-            if (!headers.TryGetValues(name, out values)) return false;
+            if (!headers.TryGetValues(name, out IEnumerable<string> values)) return false;
 
             // Get the single value and return.
             value = values.Single();

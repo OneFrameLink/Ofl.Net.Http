@@ -10,7 +10,10 @@ namespace Ofl.Net.Http
 {
     public static class StreamExtensions
     {
-        public static async Task<HttpResponseMessage> ToHttpResponseMessageAsync(this Stream stream, CancellationToken cancellationToken)
+        public static async Task<HttpResponseMessage> ToHttpResponseMessageAsync(
+            this Stream stream, 
+            CancellationToken cancellationToken
+        )
         {
             // Validate parameters.
             if (stream == null) throw new ArgumentNullException(nameof(stream));
@@ -19,17 +22,18 @@ namespace Ofl.Net.Http
             var response = new HttpResponseMessage();
 
             // Get the enumerator.  Dispose when done.
-            using (IAsyncEnumerator<byte> enumerator = stream.ToAsyncEnumerable().GetEnumerator())
-            {
-                // Get the status line.
-                await response.SetStatusLineAsync(enumerator, cancellationToken).ConfigureAwait(false);
+            IAsyncEnumerator<byte> enumerator = stream
+                .ToAsyncEnumerable(cancellationToken)
+                .GetAsyncEnumerator();
 
-                // Read the headers.
-                await response.SetHeaderFieldsAsync(enumerator, cancellationToken).ConfigureAwait(false);
+            // Get the status line.
+            await response.SetStatusLineAsync(enumerator).ConfigureAwait(false);
 
-                // Read the content.
-                await response.SetContentAsync(enumerator, cancellationToken).ConfigureAwait(false);
-            }
+            // Read the headers.
+            await response.SetHeaderFieldsAsync(enumerator).ConfigureAwait(false);
+
+            // Read the content.
+            await response.SetContentAsync(enumerator).ConfigureAwait(false);
 
             // Return the response.
             return response;

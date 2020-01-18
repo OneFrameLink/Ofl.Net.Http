@@ -17,19 +17,20 @@ namespace Ofl.Net.Http
         private static readonly Regex StatusLineRegex = new Regex(@"^HTTP\/(?<version>[0-9]\.[0-9]) (?<statusCode>[0-9]{3}) (?<reasonPhrase>.*)$",
             RegexOptions.Compiled | RegexOptions.Singleline);
 
-        internal static async Task SetStatusLineAsync(this HttpResponseMessage response, IAsyncEnumerator<byte> enumerator, 
-            CancellationToken cancellationToken)
+        internal static async Task SetStatusLineAsync(
+            this HttpResponseMessage response,
+            IAsyncEnumerator<byte> enumerator)
         {
             // Validate parameters.
             if (response == null) throw new ArgumentNullException(nameof(response));
             if (enumerator == null) throw new ArgumentNullException(nameof(enumerator));
 
             // Match the line.
-            Match match = await enumerator.MatchLineAsync(StatusLineRegex, cancellationToken).ConfigureAwait(false);
+            Match match = await enumerator.MatchLineAsync(StatusLineRegex).ConfigureAwait(false);
 
             // Get the groups and set.
             response.Version = new Version(match.GetGroupValue("version"));
-            response.StatusCode = (HttpStatusCode) Int32.Parse(match.GetGroupValue("statusCode"));
+            response.StatusCode = (HttpStatusCode) int.Parse(match.GetGroupValue("statusCode"));
             response.ReasonPhrase = match.GetGroupValue("reasonPhrase");
         }
 
@@ -39,9 +40,9 @@ namespace Ofl.Net.Http
         private static readonly Regex FoldedHeaderFieldRegex = new Regex(@"^[\t ]+(?<value>.*)$",
             RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Singleline);
 
-        internal static async Task SetHeaderFieldsAsync(this HttpResponseMessage response,
-            IAsyncEnumerator<byte> enumerator,
-            CancellationToken cancellationToken)
+        internal static async Task SetHeaderFieldsAsync(
+            this HttpResponseMessage response,
+            IAsyncEnumerator<byte> enumerator)
         {
             // Validate parameters.
             if (response == null) throw new ArgumentNullException(nameof(response));
@@ -51,11 +52,11 @@ namespace Ofl.Net.Http
             string line;
 
             // The field and value.
-            string field = null;
-            string value = null;
+            string? field = null;
+            string? value = null;
 
             // While the line is not null or empty.
-            while (!string.IsNullOrEmpty(line = await enumerator.ReadLineAsync(cancellationToken).ConfigureAwait(false)))
+            while (!string.IsNullOrEmpty(line = await enumerator.ReadLineAsync().ConfigureAwait(false)))
             {
                 // The match.
                 Match match;
@@ -79,9 +80,10 @@ namespace Ofl.Net.Http
             if (field != null && value != null) response.Headers.TryAddWithoutValidation(field, value);
         }
 
-        internal static async Task SetContentAsync(this HttpResponseMessage response,
-            IAsyncEnumerator<byte> enumerator,
-            CancellationToken cancellationToken)
+        internal static async Task SetContentAsync(
+            this HttpResponseMessage response,
+            IAsyncEnumerator<byte> enumerator
+        )
         {
             // Validate parameters.
             if (response == null) throw new ArgumentNullException(nameof(response));
@@ -90,11 +92,11 @@ namespace Ofl.Net.Http
             // Check the transmission.
             if (response.Headers.TransferEncodingChunked ?? false)
                 // Set the content.
-                response.Content = await enumerator.ReadHttpContentFromChunkedTransferEncoding(response, cancellationToken).
+                response.Content = await enumerator.ReadHttpContentFromChunkedTransferEncoding(response).
                     ConfigureAwait(false);
             else
                 // Read the remainder of the content.
-                response.Content = await enumerator.ReadHttpContent(response, cancellationToken).
+                response.Content = await enumerator.ReadHttpContent(response).
                     ConfigureAwait(false);
         }
 
@@ -102,7 +104,7 @@ namespace Ofl.Net.Http
             RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
         internal static async Task<HttpContent> ReadHttpContentFromChunkedTransferEncoding(this IAsyncEnumerator<byte> enumerator,
-            HttpResponseMessage response, CancellationToken cancellationToken)
+            HttpResponseMessage response)
         {
             // Validate parameters.
             if (enumerator == null) throw new ArgumentNullException(nameof(enumerator));
@@ -115,7 +117,7 @@ namespace Ofl.Net.Http
             while (true)
             {
                 // Read the array buffer as a string.
-                string chunkSize = await enumerator.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+                string chunkSize = await enumerator.ReadLineAsync().ConfigureAwait(false);
 
                 // Match.
                 Match match = ChunkSizeRegex.Match(chunkSize);
@@ -129,11 +131,11 @@ namespace Ofl.Net.Http
                     break;
 
                 // While there are bytes to read.
-                while (length-- > 0 && await enumerator.MoveNext(cancellationToken).ConfigureAwait(false))
+                while (length-- > 0 && await enumerator.MoveNextAsync().ConfigureAwait(false))
                     ms.WriteByte(enumerator.Current);
 
                 // Read the bytes.
-                var line = await enumerator.ReadLineBytesAsync(cancellationToken).ConfigureAwait(false);
+                var line = await enumerator.ReadLineBytesAsync().ConfigureAwait(false);
 
                 // If not empty, throw.
                 if (line.Count > 0) throw new InvalidOperationException("An unexpected byte sequence was encountered after processing chunked encoding data.");
@@ -141,7 +143,7 @@ namespace Ofl.Net.Http
 
             // Set the header fields again.  This is for extra headers that
             // may be passed down.
-            await response.SetHeaderFieldsAsync(enumerator, cancellationToken).ConfigureAwait(false);
+            await response.SetHeaderFieldsAsync(enumerator).ConfigureAwait(false);
 
             // Reset the memory stream.
             ms.Seek(0, SeekOrigin.Begin);
@@ -150,26 +152,24 @@ namespace Ofl.Net.Http
             return new StreamContent(ms);
         }
 
-        internal static async Task<HttpContent> ReadHttpContent(this IAsyncEnumerator<byte> enumerator,
-            HttpResponseMessage response,
-            CancellationToken cancellationToken)
+        internal static async Task<HttpContent> ReadHttpContent(
+            this IAsyncEnumerator<byte> enumerator,
+            HttpResponseMessage response
+        )
         {
             // Validate parameters.
             if (enumerator == null) throw new ArgumentNullException(nameof(enumerator));
             if (response == null) throw new ArgumentNullException(nameof(response));
 
-            // The content length string.
-            string contentLengthString;
-
             // The content length.
-            int contentLength = response.Headers.TryGetValue("Content-Length", out contentLengthString) ?
+            int contentLength = response.Headers.TryGetValue("Content-Length", out string? contentLengthString) ?
                 int.Parse(contentLengthString) : -1;
 
             // The memory stream.
             var ms = contentLength > 0 ? new MemoryStream(contentLength) : new MemoryStream();
 
             // Cycle through the bytes, pushing to the memory stream.
-            while ((contentLength < 0 || contentLength-- > 0) && await enumerator.MoveNext(cancellationToken).ConfigureAwait(false))
+            while ((contentLength < 0 || contentLength-- > 0) && await enumerator.MoveNextAsync().ConfigureAwait(false))
                 ms.WriteByte(enumerator.Current);
 
             // Seek to the beginning of the stream.
